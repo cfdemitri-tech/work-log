@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>北斗の拳 モード判別</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111318;
+      --panel: #1b1f27;
+      --panel-2: #242a35;
+      --border: #3a4250;
+      --text: #f3f5f7;
+      --muted: #aab2bf;
+      --accent: #e6b84a;
+      --danger: #d95c5c;
+      --state: #4b77be;
+      --button: #303744;
+      --button-active: #465166;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    h1 {
+      margin: 4px 0 12px;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th:first-child,
+    td:first-child {
+      width: 12%;
+    }
+
+    th:not(:first-child),
+    td:not(:first-child) {
+      width: 22%;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 6px;
+      white-space: nowrap;
+    }
+
+    th {
+      background: var(--panel-2);
+    }
+
+    td:first-child,
+    th:first-child {
+      font-weight: 700;
+    }
+
+    .game-input {
+      width: 100%;
+      min-height: 52px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0f1116;
+      color: var(--text);
+      font-size: 22px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .game-input:focus {
+      border-color: var(--accent);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      min-height: 58px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--button);
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      background: var(--button-active);
+      transform: translateY(1px);
+    }
+
+    .state-button {
+      background: var(--state);
+    }
+
+    .at-button {
+      background: #7a4a91;
+    }
+
+    .undo-button {
+      width: 100%;
+      background: var(--danger);
+    }
+
+    .status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .top-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .press-indicator {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      border-radius: 50%;
+      background: #59616d;
+      box-shadow: none;
+      transition: background-color 1s ease, box-shadow 1s ease;
+    }
+
+    .press-indicator.is-active {
+      background: #58f27d;
+      box-shadow: 0 0 10px rgba(88, 242, 125, 0.95);
+      transition: none;
+    }
+
+    .past-label {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .latest-button {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 10px;
+      font-size: 15px;
+      background: var(--panel-2);
+    }
+
+    .history li {
+      padding: 7px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .history li.is-selected {
+      background: rgba(230, 184, 74, 0.24);
+      outline: 1px solid var(--accent);
+    }
+
+    .history {
+      margin: 0;
+      padding-left: 24px;
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    .empty-history {
+      margin: 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .copy-button {
+      width: 100%;
+      min-height: 48px;
+      background: #356b54;
+      font-size: 16px;
+    }
+
+    .copy-message {
+      min-height: 20px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 430px) {
+      .app {
+        padding: 8px;
+      }
+
+      .panel {
+        padding: 8px;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        padding: 9px 2px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      table {
+        font-size: 11px;
+      }
+
+      th,
+      td {
+        padding: 8px 1px;
+      }
+    }
+
+    @media (min-width: 520px) {
+      .button-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>パチスロ北斗の拳 モード判別</h1>
+
+    <section class="panel">
+      <div class="top-status-row">
+        <span id="pressIndicator" class="press-indicator" aria-hidden="true"></span>
+        <span id="viewModeLabel">現在の状態を表示中</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>設定</th>
+              <th>地獄</th>
+              <th>通常</th>
+              <th>天国</th>
+              <th>本前兆</th>
+            </tr>
+          </thead>
+          <tbody id="probabilityBody"></tbody>
+        </table>
+      </div>
+      <div id="statusText" class="status">状態ボタンを押すと判別開始</div>
+      <button id="returnLatestButton" class="latest-button" hidden>最新に戻る</button>
+    </section>
+
+    <section class="panel">
+      <input
+        id="gameCount"
+        class="game-input"
+        type="number"
+        inputmode="numeric"
+        min="0"
+        placeholder="ゲーム数（空欄でも可）"
+      />
+    </section>
+
+    <section class="panel">
+      <div class="button-grid">
+        <button data-action="役" data-name="リプレイ">リプレイ</button>
+        <button data-action="役" data-name="弱スイカ">弱スイカ</button>
+        <button data-action="役" data-name="強スイカ">強スイカ</button>
+        <button data-action="役" data-name="弱チェリー">弱チェリー</button>
+        <button data-action="役" data-name="強チェリー">強チェリー</button>
+        <button data-action="役" data-name="チャンス目">チャンス目</button>
+
+        <button class="state-button" data-action="状態" data-name="低確">低確</button>
+        <button class="state-button" data-action="状態" data-name="通常">通常</button>
+        <button class="state-button" data-action="状態" data-name="天国">天国</button>
+
+        <button class="at-button" data-action="その他" data-name="AT当選">AT当選</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <button id="undoButton" class="undo-button">1つ戻す</button>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin-top: 0; font-size: 18px;">履歴</h2>
+      <div class="history-actions">
+        <button id="copyHistoryButton" class="copy-button">履歴を一括コピー</button>
+      </div>
+      <ol id="historyList" class="history"></ol>
+      <p id="emptyHistory" class="empty-history">履歴はまだありません</p>
+      <p id="copyMessage" class="copy-message" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    // 設定一覧
+    const SETTINGS = ["s1", "s2", "s4", "s5", "s6"];
+    const SETTING_LABELS = {
+      s1: "1",
+      s2: "2",
+      s4: "4",
+      s5: "5",
+      s6: "6"
+    };
+
+    // モードの並び順
+    const MODES = ["地獄", "通常", "天国", "本前兆"];
+
+    // Claudeの指示文にある移行率データ
+    const transitionData = {
+      "地獄滞在時": {
+        "弱スイカ": {
+          "s1": [67.58, 30.09, 2.00, 0.33],
+          "s2": [67.16, 30.45, 2.01, 0.38],
+          "s4": [56.26, 40.06, 2.67, 1.01],
+          "s5": [55.11, 40.21, 2.66, 2.01],
+          "s6": [53.92, 40.69, 2.71, 2.68]
+        },
+        "強スイカ": {
+          "s1": [0, 68.62, 25.00, 6.38],
+          "s2": [0, 68.52, 25.00, 6.48],
+          "s4": [0, 67.86, 25.00, 7.14],
+          "s5": [0, 66.52, 25.00, 8.48],
+          "s6": [0, 65.93, 25.00, 9.07]
+        },
+        "弱チェリー": {
+          "s1": [94.03, 5.69, 0.12, 0.15],
+          "s2": [93.97, 5.74, 0.13, 0.16],
+          "s4": [91.85, 7.63, 0.17, 0.35],
+          "s5": [91.36, 7.78, 0.17, 0.69],
+          "s6": [90.82, 7.92, 0.18, 1.08]
+        },
+        "強チェリー": {
+          "all": [0, 68.75, 6.25, 25.00]
+        },
+        "チャンス目": {
+          "s1": [75.00, 24.19, 0.19, 0.61],
+          "s2": [74.78, 24.17, 0.18, 0.87],
+          "s4": [73.69, 23.18, 0.19, 2.94],
+          "s5": [72.39, 21.94, 0.19, 5.48],
+          "s6": [71.76, 21.31, 0.19, 6.74]
+        },
+        "リプレイ": {
+          "all": [100, 0, 0, 0]
+        }
+      },
+      "通常滞在時": {
+        "弱スイカ": {
+          "s1": [0, 67.55, 31.19, 1.26],
+          "s2": [0, 67.23, 31.38, 1.39],
+          "s4": [0, 56.23, 40.13, 3.64],
+          "s5": [0, 55.14, 39.80, 5.06],
+          "s6": [0, 53.88, 40.09, 6.03]
+        },
+        "強スイカ": {
+          "all": [0, 0, 89.84, 10.16]
+        },
+        "弱チェリー": {
+          "s1": [0, 95.97, 3.75, 0.28],
+          "s2": [0, 95.80, 3.81, 0.39],
+          "s4": [0, 93.58, 4.93, 1.49],
+          "s5": [0, 92.20, 4.90, 2.90],
+          "s6": [0, 91.12, 4.97, 3.91]
+        },
+        "強チェリー": {
+          "all": [0, 62.50, 12.50, 25.00]
+        },
+        "チャンス目": {
+          "s1": [0, 75.00, 23.53, 1.47],
+          "s2": [0, 74.41, 24.08, 1.50],
+          "s4": [0, 74.13, 23.87, 2.00],
+          "s5": [0, 73.92, 23.61, 2.47],
+          "s6": [0, 73.72, 23.42, 2.86]
+        },
+        "リプレイ": {
+          "all": [11.72, 88.28, 0, 0]
+        }
+      },
+      "天国滞在時": {
+        "弱スイカ": {
+          "s1": [0, 0, 89.34, 10.66],
+          "s2": [0, 0, 89.22, 10.78],
+          "s4": [0, 0, 83.98, 16.02],
+          "s5": [0, 0, 82.14, 17.86],
+          "s6": [0, 0, 80.84, 19.16]
+        },
+        "強スイカ": {
+          "all": [0, 0, 50.00, 50.00]
+        },
+        "弱チェリー": {
+          "s1": [0, 0, 98.25, 1.75],
+          "s2": [0, 0, 98.15, 1.85],
+          "s4": [0, 0, 96.13, 3.87],
+          "s5": [0, 0, 94.57, 5.43],
+          "s6": [0, 0, 92.86, 7.14]
+        },
+        "強チェリー": {
+          "all": [0, 0, 0, 100.00]
+        },
+        "チャンス目": {
+          "all": [0, 0, 75.00, 25.00]
+        },
+        "リプレイ": {
+          "all": [3.9067, 7.8133, 88.28, 0]
+        }
+      }
+    };
+
+    // 判別開始前はfalse
+    let started = false;
+
+    // 各設定の現在確率
+    let probabilities = createEmptyProbabilities();
+
+    // 履歴
+    let history = [];
+
+    // 戻すための「操作前」スナップショット
+    let snapshots = [];
+
+    // 履歴各行に対応する「操作直後」スナップショット
+    let historySnapshots = [];
+
+    // nullなら最新表示、数値ならその履歴時点を表示
+    let selectedHistoryIndex = null;
+
+    let indicatorTimer = null;
+
+    const probabilityBody = document.getElementById("probabilityBody");
+    const gameCountInput = document.getElementById("gameCount");
+    const historyList = document.getElementById("historyList");
+    const emptyHistory = document.getElementById("emptyHistory");
+    const statusText = document.getElementById("statusText");
+    const undoButton = document.getElementById("undoButton");
+    const pressIndicator = document.getElementById("pressIndicator");
+    const viewModeLabel = document.getElementById("viewModeLabel");
+    const returnLatestButton = document.getElementById("returnLatestButton");
+    const copyHistoryButton = document.getElementById("copyHistoryButton");
+    const copyMessage = document.getElementById("copyMessage");
+
+    // 判別開始前の空状態を作る
+    function createEmptyProbabilities() {
+      const result = {};
+      for (const setting of SETTINGS) {
+        result[setting] = null;
+      }
+      return result;
+    }
+
+    // 確率状態を安全に複製する
+    function cloneProbabilities(source) {
+      const result = {};
+      for (const setting of SETTINGS) {
+        result[setting] = source[setting] ? [...source[setting]] : null;
+      }
+      return result;
+    }
+
+    // 現在状態をスナップショットとして保存
+    function saveSnapshot() {
+      snapshots.push({
+        started,
+        probabilities: cloneProbabilities(probabilities),
+        history: history.map(item => ({ ...item }))
+      });
+    }
+
+    // 履歴タップ表示用に、操作直後の確率状態を保存
+    function saveHistorySnapshot() {
+      historySnapshots.push({
+        started,
+        probabilities: cloneProbabilities(probabilities)
+      });
+    }
+
+    // ボタンが押されたことを光る丸で知らせる
+    function flashIndicator() {
+      clearTimeout(indicatorTimer);
+      pressIndicator.classList.remove("is-active");
+      void pressIndicator.offsetWidth;
+      pressIndicator.classList.add("is-active");
+
+      indicatorTimer = setTimeout(() => {
+        pressIndicator.classList.remove("is-active");
+      }, 30);
+    }
+
+    function returnToLatest() {
+      selectedHistoryIndex = null;
+      render();
+    }
+
+    // 状態ボタンで全設定を100%に上書き
+    function resetToMode(modeName) {
+      const modeIndex = MODES.indexOf(modeName);
+
+      for (const setting of SETTINGS) {
+        probabilities[setting] = [0, 0, 0, 0];
+        probabilities[setting][modeIndex] = 100;
+      }
+
+      started = true;
+    }
+
+    // 指定された設定の移行率を取得
+    function getTransitionRates(modeKey, roleName, setting) {
+      const roleData = transitionData[modeKey]?.[roleName];
+
+      if (!roleData) {
+        return null;
+      }
+
+      return roleData[setting] || roleData.all || null;
+    }
+
+    // 小役成立時に確率分布を更新
+    function applyRole(roleName) {
+      if (!started) {
+        return;
+      }
+
+      for (const setting of SETTINGS) {
+        const current = probabilities[setting];
+        const next = [0, 0, 0, 0];
+
+        // 地獄・通常・天国からの移行を計算
+        const sourceModeKeys = ["地獄滞在時", "通常滞在時", "天国滞在時"];
+
+        for (let sourceIndex = 0; sourceIndex < 3; sourceIndex++) {
+          const rates = getTransitionRates(sourceModeKeys[sourceIndex], roleName, setting);
+
+          if (!rates) {
+            // データがなければ現状維持
+            next[sourceIndex] += current[sourceIndex];
+            continue;
+          }
+
+          for (let destinationIndex = 0; destinationIndex < 4; destinationIndex++) {
+            next[destinationIndex] += current[sourceIndex] * (rates[destinationIndex] / 100);
+          }
+        }
+
+        // 本前兆は吸収状態
+        next[3] += current[3];
+
+        // 丸め誤差を補正するため100%に正規化
+        const total = next.reduce((sum, value) => sum + value, 0);
+
+        probabilities[setting] = total > 0
+          ? next.map(value => (value / total) * 100)
+          : [0, 0, 0, 0];
+      }
+    }
+
+    // 入力されたゲーム数を履歴表示用に整える
+    function getGameCountText() {
+      const raw = gameCountInput.value.trim();
+      return raw === "" ? "" : `${raw}G`;
+    }
+
+    // 履歴へ追加
+    function addHistory(name) {
+      history.push({
+        gameCount: getGameCountText(),
+        name
+      });
+    }
+
+    // ボタン操作
+    function handleAction(action, name) {
+      flashIndicator();
+
+      // 過去表示中でも、入力は必ず最新状態に対して行う
+      selectedHistoryIndex = null;
+
+      // 操作前の状態を保存
+      saveSnapshot();
+
+      if (action === "状態") {
+        const modeMap = {
+          "低確": "地獄",
+          "通常": "通常",
+          "天国": "天国"
+        };
+        resetToMode(modeMap[name]);
+      } else if (action === "役") {
+        applyRole(name);
+      }
+      // AT当選は確率へ影響させない
+
+      addHistory(name);
+      saveHistorySnapshot();
+      gameCountInput.value = "";
+      render();
+    }
+
+    // 1つ戻す
+    function undoLastAction() {
+      flashIndicator();
+
+      const previous = snapshots.pop();
+
+      if (!previous) {
+        return;
+      }
+
+      historySnapshots.pop();
+      selectedHistoryIndex = null;
+      started = previous.started;
+      probabilities = cloneProbabilities(previous.probabilities);
+      history = previous.history.map(item => ({ ...item }));
+      gameCountInput.value = "";
+      render();
+    }
+
+    // 確率表を描画
+    function renderProbabilityTable() {
+      probabilityBody.innerHTML = "";
+
+      const displaySnapshot = selectedHistoryIndex === null
+        ? { started, probabilities }
+        : historySnapshots[selectedHistoryIndex];
+
+      const displayStarted = displaySnapshot?.started ?? false;
+      const displayProbabilities = displaySnapshot?.probabilities ?? createEmptyProbabilities();
+
+      for (const setting of SETTINGS) {
+        const row = document.createElement("tr");
+
+        const settingCell = document.createElement("td");
+        settingCell.textContent = SETTING_LABELS[setting];
+        row.appendChild(settingCell);
+
+        for (let i = 0; i < 4; i++) {
+          const cell = document.createElement("td");
+
+          if (!displayStarted || !displayProbabilities[setting]) {
+            cell.textContent = "---";
+          } else {
+            cell.textContent = `${displayProbabilities[setting][i].toFixed(1)}%`;
+          }
+
+          row.appendChild(cell);
+        }
+
+        probabilityBody.appendChild(row);
+      }
+    }
+
+    // 履歴をLINEなどへ貼れる形式で一括コピー
+    async function copyHistory() {
+      flashIndicator();
+
+      if (history.length === 0) {
+        copyMessage.textContent = "コピーする履歴がありません";
+        return;
+      }
+
+      const text = history
+        .map(item => item.gameCount
+          ? `${item.gameCount} ${item.name}`
+          : item.name)
+        .join("\n");
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+
+          const copied = document.execCommand("copy");
+          document.body.removeChild(textarea);
+
+          if (!copied) {
+            throw new Error("コピーに失敗しました");
+          }
+        }
+
+        copyMessage.textContent = `${history.length}件の履歴をコピーしました`;
+      } catch (error) {
+        copyMessage.textContent = "コピーできませんでした。ブラウザの許可をご確認ください";
+        console.error(error);
+      }
+
+      setTimeout(() => {
+        copyMessage.textContent = "";
+      }, 3000);
+    }
+
+    // 履歴を描画
+    function renderHistory() {
+      historyList.innerHTML = "";
+
+      history.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = item.gameCount
+          ? `${item.gameCount} ${item.name}`
+          : item.name;
+
+        if (selectedHistoryIndex === index) {
+          li.classList.add("is-selected");
+        }
+
+        li.addEventListener("click", () => {
+          selectedHistoryIndex = selectedHistoryIndex === index ? null : index;
+          render();
+        });
+
+        historyList.appendChild(li);
+      });
+
+      emptyHistory.style.display = history.length === 0 ? "block" : "none";
+    }
+
+    // 全体を描画
+    function render() {
+      renderProbabilityTable();
+      renderHistory();
+
+      const isPastView = selectedHistoryIndex !== null;
+
+      if (isPastView) {
+        const item = history[selectedHistoryIndex];
+        const label = item?.gameCount
+          ? `${item.gameCount} ${item.name}`
+          : item?.name || "";
+        viewModeLabel.textContent = `過去表示中：${label}`;
+        viewModeLabel.classList.add("past-label");
+        returnLatestButton.hidden = false;
+        statusText.textContent = "表示だけを切り替えています（計算状態は最新のまま）";
+      } else {
+        viewModeLabel.textContent = "現在の状態を表示中";
+        viewModeLabel.classList.remove("past-label");
+        returnLatestButton.hidden = true;
+        statusText.textContent = started
+          ? "判別中"
+          : "状態ボタンを押すと判別開始";
+      }
+
+      undoButton.disabled = snapshots.length === 0;
+      undoButton.style.opacity = snapshots.length === 0 ? "0.5" : "1";
+
+      copyHistoryButton.disabled = history.length === 0;
+      copyHistoryButton.style.opacity = history.length === 0 ? "0.5" : "1";
+    }
+
+    // 各入力ボタンへイベントを登録
+    document.querySelectorAll("button[data-action]").forEach(button => {
+      button.addEventListener("click", () => {
+        handleAction(button.dataset.action, button.dataset.name);
+      });
+    });
+
+    undoButton.addEventListener("click", undoLastAction);
+    returnLatestButton.addEventListener("click", () => {
+      flashIndicator();
+      returnToLatest();
+    });
+
+    copyHistoryButton.addEventListener("click", copyHistory);
+
+    // 初期表示
+    render();
+  </script>
+</body>
+</html>
